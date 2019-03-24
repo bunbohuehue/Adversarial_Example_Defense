@@ -74,7 +74,7 @@ reconstruction_function = nn.MSELoss(size_average=False)
 
 def loss_function(recon_x, x, mu, logvar):
     """
-    recon_x: generating images
+    recon_x: generating imagess
     x: origin images
     mu: latent mean
     logvar: latent log variance
