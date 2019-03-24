@@ -17,7 +17,6 @@ def to_img(x):
     x = x.clamp(0, 1)
     x = x.view(x.size(0), 1, 28, 28)
     return x
-#test test
 
 num_epochs = 100
 batch_size = 128
