@@ -8,6 +8,8 @@ from torchvision.utils import save_image
 from torchvision.datasets import MNIST
 import os
 
+import cleverhans
+
 if not os.path.exists('./output_img'):
     os.mkdir('./output_img')
 
