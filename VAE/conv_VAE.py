@@ -8,8 +8,6 @@ from torchvision.utils import save_image
 from torchvision.datasets import MNIST
 import os
 
-import cleverhans
-
 if not os.path.exists('./output_img'):
     os.mkdir('./output_img')
 
@@ -28,9 +26,6 @@ img_transform = transforms.Compose([
     transforms.ToTensor(),
     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
 ])
-
-dataset = MNIST('./', transform=img_transform, download=True)
-dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
 
 class autoencoder(nn.Module):
@@ -87,28 +82,36 @@ def loss_function(recon_x, x, mu, logvar):
     # KL divergence
     return BCE + KLD
 
+def main():
+    dataset = MNIST('./', transform=img_transform, download=True)
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
-model = autoencoder()
-criterion = nn.MSELoss()
-optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate,
-                             weight_decay=1e-5)
+    model = autoencoder()
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate,
+                                 weight_decay=1e-5)
 
-for epoch in range(num_epochs):
-    for data in dataloader:
-        img, _ = data
-        img = Variable(img)
-        # ===================forward=====================
-        recon_batch, mu, logvar = model(img)
-        loss = loss_function(recon_batch, img, mu, logvar)
-        # ===================backward====================
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-    # ===================log========================
-    print('epoch [{}/{}], loss:{:.4f}'
-          .format(epoch+1, num_epochs, loss.data.item()))
-    if epoch % 1 == 0:
-        pic = to_img(recon_batch.data)
-        save_image(pic, './output_img/image_{}.png'.format(epoch))
+    for epoch in range(num_epochs):
+        for data in dataloader:
+            img, _ = data
+            img = Variable(img)
+            # ===================forward=====================
+            recon_batch, mu, logvar = model(img)
+            loss = loss_function(recon_batch, img, mu, logvar)
+            # ===================backward====================
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            # save model
+            torch.save(model.state_dict(), './curr_model')
+        # ===================log========================
+        print('epoch [{}/{}], loss:{:.4f}'
+              .format(epoch + 1, num_epochs, loss.data.item()))
+        if epoch % 1 == 0:
+            pic = to_img(recon_batch.data)
+            save_image(pic, './output_img/image_{}.png'.format(epoch))
 
-torch.save(model.state_dict(), './conv_autoencoder.pth')
+    torch.save(model.state_dict(), './conv_autoencoder.pth')
+
+
+if __name__ == "__main__":
+    main()
