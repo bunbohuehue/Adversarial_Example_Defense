@@ -3,3 +3,9 @@
 *.xml
 VAE/.DS_Store
 VAE/results/.DS_Store
+VAE/__pycache__/conv_VAE.cpython-37.pyc
+VAE/curr_model
+VAE/.DS_Store
+data/.DS_Store
+VAE/.DS_Store
+.DS_Store
