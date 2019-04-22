@@ -11,7 +11,6 @@ import os
 if not os.path.exists('./output_img'):
     os.mkdir('./output_img')
 
-
 def to_img(x):
     x = 0.5 * (x + 1)
     x = x.clamp(0, 1)
@@ -95,10 +94,11 @@ def loss_function(recon_x, x, mu, logvar):
     #print (BCE, KLD)
     return BCE, KLD
 
-def gen_image(model, cls, num):
-    # output num x 1 x 28 x 28
-    eps = Variable(torch.randn(num, hdim))
-    c = torch.cat([(torch.arange(0, 10) == cls).float().unsqueeze(0) for _ in range(num)], 0)
+def gen_image(model, cls):
+    # cls batch_size
+    # output batch_size x 1 x 28 x 28
+    eps = Variable(torch.randn(len(cls), hdim))
+    c = torch.cat([(torch.arange(0, 10) == cls[i]).float().unsqueeze(0) for i in range(len(cls))], 0)
     z = torch.cat([eps, c], 1)
     z = model.fc(z)
     x = model.decoder(z.view(z.size(0), 32, 7, 7))
