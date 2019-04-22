@@ -15,8 +15,8 @@ use_cuda = True
 img_transform = transforms.ToTensor()
 
 class verifyDataset(torch.utils.data.Dataset):
-	def __init__(self, VAE_model, classifier):
-		self.dataset = MNIST('./', train=True, transform=img_transform, download=True)
+	def __init__(self, VAE_model, classifier, training):
+		self.dataset = MNIST('./', train=training, transform=img_transform, download=True)
 		self.VAE_model = VAE_model
 		self.classifier = classifier
 
