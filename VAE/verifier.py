@@ -108,6 +108,36 @@ class Verifier(nn.Module):
 		output = self.fc(output)
 		return output
 
+class Cifar_10_Verifier(nn.Module):
+	"""
+	Modified from LeNet5
+	Input - batch_size x 6 x 32 x 32
+	Output - batch_size x 2
+	"""
+	def __init__(self):
+		super(Verifier, self).__init__()
+
+		self.convnet = nn.Sequential(
+			nn.Conv2d(6, 16, kernel_size=(5, 5)),
+			nn.ReLU(),
+			nn.MaxPool2d(kernel_size=(2, 2), stride=2),
+			nn.Conv2d(16, 32, kernel_size=(5, 5)),
+			nn.ReLU(),
+			nn.MaxPool2d(kernel_size=(2, 2), stride=2),
+			nn.Conv2d(32, 120, kernel_size=(5, 5)),
+			nn.ReLU())
+
+		self.fc = nn.Sequential(
+			nn.Linear(120, 84),
+			nn.ReLU(),
+			nn.Linear(84, 2))
+
+	def forward(self, img):
+		output = self.convnet(img)
+		output = output.view(img.size(0), -1)
+		output = self.fc(output)
+		return output
+
 def train_epoch(model, train_loader, criterion, optimizer):
 	model.train()
 	model.to(device)
