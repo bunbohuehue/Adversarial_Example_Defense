@@ -108,36 +108,6 @@ class Verifier(nn.Module):
 		output = self.fc(output)
 		return output
 
-class Cifar_10_Verifier(nn.Module):
-	"""
-	Modified from LeNet5
-	Input - batch_size x 6 x 32 x 32
-	Output - batch_size x 2
-	"""
-	def __init__(self):
-		super(Verifier, self).__init__()
-
-		self.convnet = nn.Sequential(
-			nn.Conv2d(6, 16, kernel_size=(5, 5)),
-			nn.ReLU(),
-			nn.MaxPool2d(kernel_size=(2, 2), stride=2),
-			nn.Conv2d(16, 32, kernel_size=(5, 5)),
-			nn.ReLU(),
-			nn.MaxPool2d(kernel_size=(2, 2), stride=2),
-			nn.Conv2d(32, 120, kernel_size=(5, 5)),
-			nn.ReLU())
-
-		self.fc = nn.Sequential(
-			nn.Linear(120, 84),
-			nn.ReLU(),
-			nn.Linear(84, 2))
-
-	def forward(self, img):
-		output = self.convnet(img)
-		output = output.view(img.size(0), -1)
-		output = self.fc(output)
-		return output
-
 def train_epoch(model, train_loader, criterion, optimizer):
 	model.train()
 	model.to(device)
@@ -201,8 +171,8 @@ def test(CVAE, verifier, classifier, test_loader, num_votes):
 		data_grad = data.grad.data
 
 		epsilons = [0, .05, .1, .15, .2, .25, .3]
-		#epsilon = epsilons[randint(0, len(epsilons) - 1)]
-		epsilon = 0
+		epsilon = epsilons[randint(0, len(epsilons) - 1)]
+		#epsilon = 0
 		perturbed_data = attack.fgsm_attack(data, epsilon, data_grad)
 
 		adv_output = classifier(perturbed_data)
@@ -224,16 +194,16 @@ def test(CVAE, verifier, classifier, test_loader, num_votes):
 				correct_predictions += 1.0
 			total_predictions += 1.0
 
-		print("Finished batch ", batch_idx, "/", total_batch)
+		#print("Finished batch ", batch_idx, "/", total_batch)
 
 	print("Accuracy: ", correct_predictions / total_predictions)
 
 CVAE = autoencoder().to(device)
-CVAE.load_state_dict(torch.load('curr_model_99.pth', map_location='cpu'))
+CVAE.load_state_dict(torch.load('cVAE.pth', map_location='cpu'))
 classifier = Net().to(device)
 classifier.load_state_dict(torch.load(pretrained_model, map_location='cpu'))
 #verifier = Verifier()
-verifier = torch.load('9674.pt')
+verifier = torch.load('Verifier.pt')
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(verifier.parameters())
 num_epochs = 10
@@ -252,5 +222,8 @@ mnist_dataloader = torch.utils.data.DataLoader(mnist_dataset,**dataloader_args1)
 #     tosave = str(epoch+1) + 'epoch.pt'
 #     torch.save(verifier, tosave)
 
-num_votes = 10
-test(CVAE, verifier, classifier, mnist_dataloader, num_votes)
+num_votes = 20
+while(num_votes <= 100):
+	print(num_votes)
+	test(CVAE, verifier, classifier, mnist_dataloader, num_votes)
+	num_votes += 10

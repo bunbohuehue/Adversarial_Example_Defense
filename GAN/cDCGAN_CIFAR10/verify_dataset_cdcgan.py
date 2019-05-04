@@ -2,23 +2,20 @@ import attack
 import torch
 import torch.nn.functional as F
 import torch.utils.data.dataloader as dataloader
-import conv_cVAE
+import cDCGAN_cifar10
 from random import randint
-from torchvision.datasets import MNIST
+from torchvision.datasets import CIFAR10
 from torchvision import transforms
 
-epsilons = [0, .05, .1, .15, .2, .25, .3]
-pretrained_model = "../data/lenet_mnist_model.pth"
-use_cuda = True
-
-
-img_transform = transforms.ToTensor()
+pretrained_model = "cifar10-d875770b.pth"
 
 class verifyDataset(torch.utils.data.Dataset):
-	def __init__(self, VAE_model, classifier, training):
-		self.dataset = MNIST('./', train=training, transform=img_transform, download=True)
-		self.VAE_model = VAE_model
+	def __init__(self, generator, classifier, training):
+		self.dataset = CIFAR10('./', train=training, transform=transforms.ToTensor(), download=True)
+		self.generator = generator
+		self.generator.eval()
 		self.classifier = classifier
+		self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
 	def __len__(self):
 		return len(self.dataset)
@@ -27,9 +24,10 @@ class verifyDataset(torch.utils.data.Dataset):
 		return self.generate(*self.dataset[i])
 
 	def generate(self, data, target):
-		data = data.unsqueeze(0)
-		target = target.unsqueeze(0)
-		# Send the data and label to the device
+		epsilons = [0, .05, .1, .15, .2, .25, .3]
+		data = torch.FloatTensor(data).unsqueeze(0) #.to(self.device)
+		target = torch.tensor([target]) #.to(self.device)
+		# Send the data and label 	to the device
 		data.requires_grad = True
 
 		# Forward pass the data through the model
@@ -40,6 +38,9 @@ class verifyDataset(torch.utils.data.Dataset):
 		self.classifier.zero_grad()
 		loss.backward()
 		data_grad = data.grad.data
+
+		z = torch.randn(100).view(1, 100, 1, 1)
+		y = torch.zeros(10)
 
 		if (randint(0, 4) > 1):
 			# Call FGSM Attack
@@ -53,13 +54,20 @@ class verifyDataset(torch.utils.data.Dataset):
 			adv_pred = output.max(1, keepdim=True)[1] # get the index of the max log-probability
 
 			label = (adv_pred == target)[0].item()
-			gen_adv_data = (conv_cVAE.gen_image(self.VAE_model, adv_pred))
+			# TODO get genimage data
+			y[adv_pred] = 1
+			y = y.view(1, 10, 1, 1)
+			gen_adv_data = self.generator(z, y)
 			example = torch.cat((gen_adv_data, adv_example),1)
 		else:
 			# don't call FGSM
 			label = (original_pred == target)[0].item()
 			# cVAE generated image
-			gen_data = (conv_cVAE.gen_image(self.VAE_model, original_pred))
+			y[original_pred] = 1
+			y = y.view(1, 10, 1, 1)
+			gen_data = self.generator(z, y)
 			example = torch.cat((gen_data, data),1)
+
+		example = example.detach()
 
 		return example.squeeze(0), label
