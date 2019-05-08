@@ -12,7 +12,7 @@ from random import randint
 import os
 import time
 import attack
-from verify_dataset import verifyDataset, pretrained_model
+from verify_dataset_cdcgan import verifyDataset, pretrained_model
 from cDCGAN_cifar10 import generator
 
 b_size = 32
@@ -96,6 +96,7 @@ def train_epoch(model, train_loader, criterion, optimizer):
 	total_predictions = 0.0
 	correct_predictions = 0.0
 	running_loss = 0.0
+
 	for batch_idx, (data, target) in enumerate(train_loader):
 		optimizer.zero_grad()
 		data = data.to(device)
@@ -138,7 +139,11 @@ def test(Generator, verifier, classifier, test_loader, num_votes):
 
 	total_batch = len(test_loader)
 
+	counter = 0
 	for batch_idx, (data, target) in enumerate(test_loader):
+		if counter == 10:
+			break
+		counter += 1
 		optimizer.zero_grad()
 		data = data.to(device)  # b x 1 x 32 x 32
 		data.requires_grad = True
@@ -154,7 +159,7 @@ def test(Generator, verifier, classifier, test_loader, num_votes):
 
 		epsilons = [0, .05, .1, .15, .2, .25, .3]
 		epsilon = epsilons[randint(1, len(epsilons) - 1)]
-		# epsilon = 0
+		epsilon = 0
 		perturbed_data = attack.fgsm_attack(data, epsilon, data_grad)
 
 		adv_output = classifier(perturbed_data)
@@ -166,13 +171,13 @@ def test(Generator, verifier, classifier, test_loader, num_votes):
 			l_onehot = torch.zeros(10)
 			l_onehot[label] = 1
 			# gen_img: 1 x 3 x 32 x 32
-			gen_img = Generator(torch.randn(100).view(1, 100, 1, 1), l_onehot.view(1, 10, 1, 1))
 			data = perturbed_data[i]  # 1 x 32 x 32
 			# data: num_votes x 3 x 32 x 32
 			data = torch.stack([data] * num_votes, 0)
-			gen_img = gen_img.squeeze(0)
 			example = torch.zeros((num_votes, 6, 32, 32))
 			for i in range(len(data)):
+				gen_img = Generator(torch.randn(100).view(1, 100, 1, 1), l_onehot.view(1, 10, 1, 1))
+				gen_img = gen_img.squeeze(0)
 				example[i] = torch.cat((gen_img, data[i]),dim=0)  #  num_votes x 6 x 32 x 32
 			outputs = verifier(example)  # num_votes x 2
 			predicted = torch.sum(F.softmax(outputs, dim=1)[:, 1])
@@ -202,7 +207,7 @@ classifier.load_state_dict(torch.load(pretrained_model, map_location = 'cpu'))
 # classifier = classifier.to(device)
 
 verifier = Cifar10_Verifier().to(device)
-verifier = torch.load('9epoch.pt')
+verifier = torch.load('cdcgan_weights/9epoch.pt')
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(verifier.parameters())
 num_epochs = 20
@@ -224,5 +229,5 @@ cifar_dataloader = torch.utils.data.DataLoader(cifar_dataset,**dataloader_args1)
 # 	tosave = str(epoch+1) + 'epoch.pt'
 # 	torch.save(verifier, tosave)
 
-num_votes = 10
+num_votes = 5
 test(Generator, verifier, classifier, cifar_dataloader, num_votes)

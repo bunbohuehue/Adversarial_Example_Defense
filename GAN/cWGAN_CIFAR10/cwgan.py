@@ -42,7 +42,7 @@ DIM = 32  # Model dimensionality
 CRITIC_ITERS = 5  # How many iterations to train the critic for
 GENER_ITERS = 1
 N_GPUS = 1  # Number of GPUs
-BATCH_SIZE = 100  # Batch size. Must be a multiple of N_GPUS
+BATCH_SIZE = 1  # Batch size. Must be a multiple of N_GPUS
 END_ITER = 100000  # How many iterations to train for
 LAMBDA = 10  # Gradient penalty lambda hyperparameter
 OUTPUT_DIM = 32 * 32 * 3  # Number of pixels in each iamge
@@ -136,33 +136,33 @@ def gen_rand_noise_with_label(label=None):
 
 cuda_available = torch.cuda.is_available()
 device = torch.device("cuda" if cuda_available else "cpu")
-fixed_label = []
-for c in range(BATCH_SIZE):
-    fixed_label.append(c % NUM_CLASSES)
-fixed_noise = gen_rand_noise_with_label(fixed_label)
-
-if RESTORE_MODE:
-    aG = torch.load(OUTPUT_PATH + "generator.pt")
-    aD = torch.load(OUTPUT_PATH + "discriminator.pt")
-else:
-    aG = GoodGenerator(32, 32 * 32 * 3)
-    aD = GoodDiscriminator(32, NUM_CLASSES)
-
-    aG.apply(weights_init)
-    aD.apply(weights_init)
-
-LR = 1e-4
-optimizer_g = torch.optim.Adam(aG.parameters(), lr=LR, betas=(0, 0.9))
-optimizer_d = torch.optim.Adam(aD.parameters(), lr=LR, betas=(0, 0.9))
-
-aux_criterion = nn.CrossEntropyLoss()  # nn.NLLLoss()
-
-one = torch.FloatTensor([1])
-mone = one * -1
-aG = aG.to(device)
-aD = aD.to(device)
-one = one.to(device)
-mone = mone.to(device)
+# fixed_label = []
+# for c in range(BATCH_SIZE):
+#     fixed_label.append(c % NUM_CLASSES)
+# fixed_noise = gen_rand_noise_with_label(fixed_label)
+#
+# if RESTORE_MODE:
+#     aG = torch.load(OUTPUT_PATH + "generator.pt")
+#     aD = torch.load(OUTPUT_PATH + "discriminator.pt")
+# else:
+#     aG = GoodGenerator(32, 32 * 32 * 3)
+#     aD = GoodDiscriminator(32, NUM_CLASSES)
+#
+#     aG.apply(weights_init)
+#     aD.apply(weights_init)
+#
+# LR = 1e-4
+# optimizer_g = torch.optim.Adam(aG.parameters(), lr=LR, betas=(0, 0.9))
+# optimizer_d = torch.optim.Adam(aD.parameters(), lr=LR, betas=(0, 0.9))
+#
+# aux_criterion = nn.CrossEntropyLoss()  # nn.NLLLoss()
+#
+# one = torch.FloatTensor([1])
+# mone = one * -1
+# aG = aG.to(device)
+# aD = aD.to(device)
+# one = one.to(device)
+# mone = mone.to(device)
 
 # writer = SummaryWriter()
 
@@ -297,5 +297,4 @@ def train():
         lib.plot.tick()
 
 
-train()
-
+# train()
