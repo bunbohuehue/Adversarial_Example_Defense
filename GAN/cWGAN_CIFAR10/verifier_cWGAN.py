@@ -130,7 +130,7 @@ def train_epoch(model, train_loader, criterion, optimizer):
 
 		torch.cuda.empty_cache()
 		if batch_idx > 0 and batch_idx % 10 == 0:
-			print ("Finished batch " + batch_idx)
+			print ("Finished batch " + str(batch_idx))
 
 	acc = (correct_predictions/total_predictions)*100.0
 	end_time = time.time()
