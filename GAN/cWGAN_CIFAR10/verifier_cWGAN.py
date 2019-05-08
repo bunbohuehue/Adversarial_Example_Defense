@@ -104,6 +104,7 @@ def train_epoch(model, train_loader, criterion, optimizer):
 	correct_predictions = 0.0
 	running_loss = 0.0
 	for batch_idx, (data, target) in enumerate(train_loader):
+		print(batch_idx)
 		optimizer.zero_grad()
 		data = data.to(device)
 		target = torch.LongTensor(target).to(device)
@@ -228,21 +229,20 @@ art_classifier = PyTorchClassifier((min_, max_),model=classifier,loss=nn.CrossEn
 		optimizer=torch.optim.Adam(classifier.parameters()),nb_classes=10,input_shape=(3,32,32),channel_index=1)
 art_classifier.fit(x_train, y_train, nb_epochs=0, batch_size=32)
 
-
-preds = np.argmax(art_classifier.predict(x_test[:20]), axis=1)
-acc = np.sum(preds == np.argmax(y_test[:20], axis=1)) / y_test.shape[0]
-print("\nTest accuracy: %.2f%%" % (acc * 100))
+# preds = np.argmax(art_classifier.predict(x_test[:20]), axis=1)
+# acc = np.sum(preds == np.argmax(y_test[:20], axis=1)) / y_test.shape[0]
+# print("\nTest accuracy: %.2f%%" % (acc * 100))
 
 epsilon = .1  # Maximum perturbation
-adv_crafter = DeepFool(art_classifier)
-x_test_adv = adv_crafter.generate(x=x_test[:2], eps=epsilon)
+adv_crafter = DeepFool(art_classifier, max_iter=10)
+# x_test_adv = adv_crafter.generate(x=x_test[:2], eps=epsilon)
 
 # Evaluate the classifier on the adversarial examples
-preds = np.argmax(art_classifier.predict(x_test_adv), axis=1)
-acc = np.sum(preds == np.argmax(y_test[:2], axis=1)) / y_test[:2].shape[0]
-print("\nTest accuracy on adversarial sample: %.2f%%" % (acc * 100))
+# preds = np.argmax(art_classifier.predict(x_test_adv), axis=1)
+# acc = np.sum(preds == np.argmax(y_test[:2], axis=1)) / y_test[:2].shape[0]
+# print("\nTest accuracy on adversarial sample: %.2f%%" % (acc * 100))
 
-###############################################################################
+############################# VERIFIER ##########################################
 
 verifier = Cifar10_Verifier().to(device)
 verifier = torch.load('2epoch_cwgan.pt')
@@ -250,21 +250,22 @@ criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(verifier.parameters())
 num_epochs = 20
 
-verify_dataset = verifyDataset(Generator, classifier, True)
-dataloader_args1 = dict(shuffle=True, batch_size=b_size, num_workers = 8, pin_memory=True) if cu \
+verify_dataset = verifyDataset(x_train, y_train, x_test, y_test, Generator, art_classifier, adv_crafter, True)
+
+dataloader_args1 = dict(shuffle=True, batch_size=b_size, num_workers=8, pin_memory=True) if cu \
 						else dict(shuffle=True, batch_size=b_size)
 verify_loader = torch.utils.data.DataLoader(verify_dataset, **dataloader_args1)
 
 # mnist_dataset = MNIST('./', train=False, transform=transforms.ToTensor(), download=True)
 # mnist_dataloader = torch.utils.data.DataLoader(mnist_dataset,**dataloader_args1)
-cifar_dataset = CIFAR10('./', train=False, transform=transforms.ToTensor(), download=True)
-cifar_dataloader = torch.utils.data.DataLoader(cifar_dataset,**dataloader_args1)
+# cifar_dataset = CIFAR10('./', train=False, transform=transforms.ToTensor(), download=True)
+# cifar_dataloader = torch.utils.data.DataLoader(cifar_dataset,**dataloader_args1)
 
-# for epoch in range(num_epochs):
-#     print('epoch: {}'.format(epoch+1))
-#     train_epoch(verifier, verify_loader, criterion, optimizer)
-#     tosave = str(epoch+1) + 'epoch_cwgan.pt'
-#     torch.save(verifier, tosave)
+for epoch in range(num_epochs):
+	print('epoch: {}'.format(epoch+1))
+	train_epoch(verifier, verify_loader, criterion, optimizer)
+	tosave = str(epoch+1) + 'epoch_cwgan.pt'
+	torch.save(verifier, tosave)
 
-num_votes = 5
-test(Generator, verifier, classifier, cifar_dataloader, num_votes)
+# num_votes = 5
+# test(Generator, verifier, classifier, cifar_dataloader, num_votes)
